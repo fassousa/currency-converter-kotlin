@@ -1,0 +1,9 @@
+# Detekt configuration for currency-converter-kotlin
+# Builds upon the default Detekt rule set; only overrides are listed here.
+
+performance:
+  SpreadOperator:
+    # runApplication<App>(*args) is the idiomatic Spring Boot Kotlin entry point.
+    # The spread operator here is unavoidable and the array is always tiny (CLI args).
+    active: false
+
