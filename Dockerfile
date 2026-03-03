@@ -1,45 +1,41 @@
-# Multi-stage build: gradle:8-jdk21 build stage -> eclipse-temurin:21-jre-alpine runtime
+# Multi-stage build: gradle:8-jdk21 → layer extractor → eclipse-temurin:21-jre-alpine
+# Note: Spring Boot 3 fat JAR with JRE ≈ 260 MB compressed; distroless/jlink alternatives
+# cause dynamic class-loading failures with JDBC/Hibernate. eclipse-temurin:21-jre-alpine
+# is the recommended base per Spring Boot documentation.
 
-# Stage 1: Build
+# ── Stage 1: Build application ───────────────────────────────────────────────
 FROM gradle:8-jdk21 AS builder
-
 WORKDIR /build
-
-# Copy build files
 COPY build.gradle.kts settings.gradle.kts gradle.properties* detekt.yml* ./
 COPY gradle ./gradle
 COPY src ./src
-
-# Build the application
 RUN gradle build -x test --no-daemon
 
-# Stage 2: Runtime
+# ── Stage 2: Extract layered JAR ─────────────────────────────────────────────
+FROM eclipse-temurin:21-jre-alpine AS extractor
+WORKDIR /extract
+COPY --from=builder /build/build/libs/currency-converter-kotlin-*.jar app.jar
+RUN java -Djarmode=layertools -jar app.jar extract
+
+# ── Stage 3: Runtime ─────────────────────────────────────────────────────────
 FROM eclipse-temurin:21-jre-alpine
 
-# Create non-root user for security
-RUN addgroup -S fintech && adduser -S app -G fintech
+RUN addgroup -S fintech && adduser -S app -G fintech && apk add --no-cache curl
 
 WORKDIR /app
 
-# Copy the JAR from build stage
-COPY --from=builder /build/build/libs/currency-converter-kotlin-*.jar app.jar
+# Copy layers least-to-most volatile (maximises Docker layer cache reuse)
+COPY --from=extractor /extract/dependencies/ ./
+COPY --from=extractor /extract/spring-boot-loader/ ./
+COPY --from=extractor /extract/snapshot-dependencies/ ./
+COPY --from=extractor /extract/application/ ./
 
-# Set ownership to non-root user
 RUN chown -R app:fintech /app
-
-# Switch to non-root user
 USER app
 
-# Expose port
 EXPOSE 8080
 
-# Health check (requires curl or wget in image, or use healthcheck via external means)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD java -cp app.jar org.springframework.boot.loader.launch.PropertiesLauncher \
-        -Dspring.boot.strategy=org.springframework.boot.loader.PropertiesLauncher \
-        || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -sf http://localhost:8080/api/v1/actuator/health || exit 1
 
-# Start application
-ENTRYPOINT ["java", "-jar", "app.jar"]
-
-
+ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]

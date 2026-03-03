@@ -5,7 +5,7 @@
 # Configuration
 # ─────────────────────────────────────────────
 APP_URL        ?= http://localhost:8080
-HEALTH_URL     := $(APP_URL)/actuator/health
+HEALTH_URL     := $(APP_URL)/api/v1/actuator/health
 POSTGRES_USER  ?= postgres
 
 # Maximum attempts × interval = total wait time
