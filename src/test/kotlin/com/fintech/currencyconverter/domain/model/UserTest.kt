@@ -25,7 +25,7 @@ class UserTest {
     }
 
     @Test
-    fun `blank empty passwordDigest throws IllegalArgumentException`() {
+    fun `empty passwordDigest throws IllegalArgumentException`() {
         assertThrows<IllegalArgumentException> { User.create("alice@example.com", "") }
     }
 }
