@@ -95,8 +95,8 @@ dependencies {
     testImplementation("org.testcontainers:postgresql")
     testImplementation("org.testcontainers:junit-jupiter")
 
-    // WireMock standalone — wiremock-jre8 is incompatible with Java 21 module system
-    testImplementation("org.wiremock:wiremock:3.5.4")
+    // WireMock standalone — includes embedded Jetty to avoid Spring Boot Jetty 12 conflicts
+    testImplementation("org.wiremock:wiremock-standalone:3.5.4")
 
     // H2 in-memory DB — pure unit tests only; never used for integration tests
     testRuntimeOnly("com.h2database:h2")

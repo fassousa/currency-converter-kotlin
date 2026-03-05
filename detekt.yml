@@ -7,3 +7,9 @@ performance:
     # The spread operator here is unavoidable and the array is always tiny (CLI args).
     active: false
 
+complexity:
+  LongParameterList:
+    # JPA @Entity primary constructors map one parameter per database column.
+    # TransactionJpaEntity has 9 columns — suppressing the threshold at the rule
+    # level avoids @Suppress noise on every JPA entity in the project.
+    constructorThreshold: 10

@@ -9,17 +9,22 @@ import com.fintech.currencyconverter.port.outbound.UserRepository
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 
 @Service
 @Transactional
 class UserService(
     private val userRepository: UserRepository,
-    private val passwordEncoder: PasswordEncoder
+    private val passwordEncoder: PasswordEncoder,
 ) : RegisterUserUseCase, AuthenticateUserUseCase {
 
     override fun register(email: String, rawPassword: String): User {
         if (userRepository.existsByEmail(email)) throw EmailAlreadyRegisteredException(email)
-        val user = User.create(email, passwordEncoder.encode(rawPassword))
+        val user = User(
+            id = UUID.randomUUID(),
+            email = email,
+            passwordDigest = passwordEncoder.encode(rawPassword),
+        )
         return userRepository.save(user)
     }
 
@@ -29,4 +34,6 @@ class UserService(
         return user
     }
 }
+
+
 

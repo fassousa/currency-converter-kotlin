@@ -1,17 +1,15 @@
 package com.fintech.currencyconverter.port.inbound
 
-import com.fintech.currencyconverter.domain.model.Currency
-import com.fintech.currencyconverter.domain.model.Money
 import com.fintech.currencyconverter.domain.model.Transaction
-import com.fintech.currencyconverter.domain.model.UserId
+import java.math.BigDecimal
 import java.util.UUID
 
 interface ConvertCurrencyUseCase {
     fun convert(
-        userId: UserId,
+        userId: UUID,
         idempotencyKey: UUID,
-        sourceMoney: Money,
-        targetCurrency: Currency
+        sourceCurrency: String,
+        sourceAmount: BigDecimal,
+        targetCurrency: String,
     ): Transaction
 }
-
