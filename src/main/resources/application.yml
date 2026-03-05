@@ -91,3 +91,29 @@ logging:
   pattern:
     console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 
+# Application-specific settings
+app:
+  jwt:
+    secret: ${JWT_SECRET:dGVzdC1zZWNyZXQta2V5LWZvci1kZXZlbG9wbWVudC0zMmJ5dGU=}
+    expiration: ${JWT_EXPIRATION:86400000}
+  currency-api:
+    url: ${CURRENCY_API_URL:https://api.exchangeratesapi.io/v1}
+    api-key: ${CURRENCY_API_KEY:change-me}
+
+# Resilience4j configuration
+resilience4j:
+  circuitbreaker:
+    instances:
+      exchangeRates:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        minimum-number-of-calls: 5
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+  retry:
+    instances:
+      exchangeRates:
+        max-attempts: 3
+        wait-duration: 500ms
+
