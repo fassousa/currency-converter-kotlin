@@ -45,8 +45,13 @@ class AuthController(
     @PostMapping("/sign_out")
     fun signOut(authentication: Authentication): ResponseEntity<Unit> {
         val jwtAuth = authentication as JwtAuthenticationToken
-        val remainingMs = (jwtAuth.expiration.time - System.currentTimeMillis()).coerceAtLeast(1000L)
+        // Ensure at least a 1-second TTL so Redis doesn't reject the SET command
+        val remainingMs = (jwtAuth.expiration.time - System.currentTimeMillis()).coerceAtLeast(MIN_REVOCATION_TTL_MS)
         tokenRevocationService.revoke(jwtAuth.jti, Duration.ofMillis(remainingMs))
         return ResponseEntity.noContent().build()
+    }
+
+    companion object {
+        private const val MIN_REVOCATION_TTL_MS = 1_000L
     }
 }

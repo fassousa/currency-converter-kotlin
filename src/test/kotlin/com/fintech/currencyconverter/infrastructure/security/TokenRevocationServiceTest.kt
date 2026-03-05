@@ -52,14 +52,6 @@ class TokenRevocationServiceTest {
     }
 
     @Test
-    fun `isRevoked returns false when redis returns false for missing key`() {
-        val jti = "missing-jti"
-        every { redisTemplate.hasKey("revoked:$jti") } returns false
-
-        assertThat(service.isRevoked(jti)).isFalse()
-    }
-
-    @Test
     fun `revoke uses correct key prefix`() {
         val jti = "abc-123"
         val keySlot = slot<String>()

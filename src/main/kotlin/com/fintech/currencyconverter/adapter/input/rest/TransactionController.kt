@@ -54,10 +54,15 @@ class TransactionController(
         authentication: Authentication,
     ): ResponseEntity<Page<TransactionResponse>> {
         val jwtAuth = authentication as JwtAuthenticationToken
-        val clampedSize = size.coerceIn(1, 100)
+        val clampedSize = size.coerceIn(MIN_PAGE_SIZE, MAX_PAGE_SIZE)
         val clampedPage = page.coerceAtLeast(0)
         val pageable = PageRequest.of(clampedPage, clampedSize, Sort.by("createdAt").descending())
         val transactions = getTransactionsUseCase.execute(jwtAuth.userId, pageable)
         return ResponseEntity.ok(transactions.map { it.toResponse() })
+    }
+
+    companion object {
+        private const val MIN_PAGE_SIZE = 1
+        private const val MAX_PAGE_SIZE = 100
     }
 }
