@@ -31,7 +31,7 @@ class CurrencyConversionService(
         val rate = exchangeRateGateway.getRate(sourceCurrency, targetCurrency)
         val targetAmount = sourceAmount.multiply(rate).setScale(4, RoundingMode.HALF_EVEN)
 
-        val transaction = Transaction(
+        val transaction = Transaction.create(
             id = UUID.randomUUID(),
             userId = userId,
             idempotencyKey = idempotencyKey,
