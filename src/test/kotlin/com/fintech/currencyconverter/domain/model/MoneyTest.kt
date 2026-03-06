@@ -48,7 +48,7 @@ class MoneyTest {
     }
 
     @Test
-    fun `convertTo rounds to 4 decimal places with HALF_UP`() {
+    fun `convertTo rounds to 4 decimal places with HALF_EVEN`() {
         val money = Money(BigDecimal("1.00"), Currency.USD)
         val result = money.convertTo(Currency.EUR, BigDecimal("0.123456"))
         assertEquals(BigDecimal("0.1235"), result.amount)

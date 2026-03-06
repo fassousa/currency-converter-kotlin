@@ -14,7 +14,7 @@ data class Money(val amount: BigDecimal, val currency: Currency) {
     }
 
     fun convertTo(targetCurrency: Currency, rate: BigDecimal): Money =
-        Money(amount.multiply(rate).setScale(MONETARY_SCALE, RoundingMode.HALF_UP), targetCurrency)
+        Money(amount.multiply(rate).setScale(MONETARY_SCALE, RoundingMode.HALF_EVEN), targetCurrency)
 
     companion object {
         const val MONETARY_SCALE = 4
