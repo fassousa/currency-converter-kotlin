@@ -3,12 +3,14 @@ package com.fintech.currencyconverter.adapter.input.rest
 import com.fintech.currencyconverter.adapter.input.rest.dto.CreateTransactionRequest
 import com.fintech.currencyconverter.adapter.input.rest.dto.TransactionResponse
 import com.fintech.currencyconverter.adapter.input.rest.mapper.toResponse
-import com.fintech.currencyconverter.domain.model.PageResult
 import com.fintech.currencyconverter.domain.port.input.CreateTransactionCommand
 import com.fintech.currencyconverter.domain.port.input.CreateTransactionUseCase
 import com.fintech.currencyconverter.domain.port.input.GetTransactionsUseCase
 import com.fintech.currencyconverter.infrastructure.security.JwtAuthenticationToken
 import jakarta.validation.Valid
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
@@ -50,19 +52,13 @@ class TransactionController(
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int,
         authentication: Authentication,
-    ): ResponseEntity<PageResult<TransactionResponse>> {
+    ): ResponseEntity<Page<TransactionResponse>> {
         val jwtAuth = authentication as JwtAuthenticationToken
         val clampedSize = size.coerceIn(1, 100)
         val clampedPage = page.coerceAtLeast(0)
-        val result = getTransactionsUseCase.execute(jwtAuth.userId, clampedPage, clampedSize)
-        val mapped = PageResult(
-            content = result.content.map { it.toResponse() },
-            page = result.page,
-            size = result.size,
-            totalElements = result.totalElements,
-            totalPages = result.totalPages,
-        )
-        return ResponseEntity.ok(mapped)
+        val pageable = PageRequest.of(clampedPage, clampedSize, Sort.by("createdAt").descending())
+        val transactions = getTransactionsUseCase.execute(jwtAuth.userId, pageable)
+        return ResponseEntity.ok(transactions.map { it.toResponse() })
     }
 }
 

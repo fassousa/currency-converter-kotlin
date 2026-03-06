@@ -2,7 +2,6 @@ package com.fintech.currencyconverter.adapter.input.rest
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fintech.currencyconverter.adapter.input.rest.dto.CreateTransactionRequest
-import com.fintech.currencyconverter.domain.model.PageResult
 import com.fintech.currencyconverter.domain.model.Transaction
 import com.fintech.currencyconverter.domain.port.input.CreateTransactionUseCase
 import com.fintech.currencyconverter.domain.port.input.GetTransactionsUseCase
@@ -15,6 +14,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.context.annotation.Import
+import org.springframework.data.domain.PageImpl
 import org.springframework.http.MediaType
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
@@ -97,8 +97,7 @@ class TransactionControllerTest {
     @Test
     fun `GET transactions returns paginated list`() {
         val transaction = buildTransaction(userId = userId)
-        every { getTransactionsUseCase.execute(any(), any(), any()) } returns
-            PageResult.of(listOf(transaction), 0, 20, 1L)
+        every { getTransactionsUseCase.execute(any(), any()) } returns PageImpl(listOf(transaction))
 
         mockMvc.get("/transactions") {
             with(authentication(jwtAuth))
@@ -110,8 +109,7 @@ class TransactionControllerTest {
 
     @Test
     fun `GET transactions clamps size to 100`() {
-        every { getTransactionsUseCase.execute(any(), any(), any()) } returns
-            PageResult.of(emptyList(), 0, 100, 0L)
+        every { getTransactionsUseCase.execute(any(), any()) } returns PageImpl(emptyList())
 
         mockMvc.get("/transactions?size=999") {
             with(authentication(jwtAuth))
