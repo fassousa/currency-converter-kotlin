@@ -1,15 +1,12 @@
 package com.fintech.currencyconverter.adapter.persistence.mapper
 
 import com.fintech.currencyconverter.adapter.persistence.entity.TransactionJpaEntity
-import com.fintech.currencyconverter.domain.model.Currency
-import com.fintech.currencyconverter.domain.model.Money
 import com.fintech.currencyconverter.domain.model.Transaction
-import com.fintech.currencyconverter.domain.model.TransactionId
-import com.fintech.currencyconverter.domain.model.UserId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.time.Instant
+import java.time.ZoneOffset
 import java.util.UUID
 
 class TransactionMapperTest {
@@ -26,41 +23,44 @@ class TransactionMapperTest {
             id = id, userId = userId, idempotencyKey = idKey,
             sourceCurrency = "USD", sourceAmount = BigDecimal("100.0000"),
             targetCurrency = "EUR", targetAmount = BigDecimal("91.5000"),
-            exchangeRate = BigDecimal("0.91500000"), createdAt = now
+            exchangeRate = BigDecimal("0.91500000"), createdAt = now,
         )
 
         val domain = mapper.toDomain(entity)
 
-        assertEquals(TransactionId(id), domain.id)
-        assertEquals(UserId(userId), domain.userId)
+        assertEquals(id, domain.id)
+        assertEquals(userId, domain.userId)
         assertEquals(idKey, domain.idempotencyKey)
-        assertEquals(Currency.USD, domain.sourceMoney.currency)
-        assertEquals(BigDecimal("100.0000"), domain.sourceMoney.amount)
-        assertEquals(Currency.EUR, domain.targetMoney.currency)
-        assertEquals(BigDecimal("91.5000"), domain.targetMoney.amount)
+        assertEquals("USD", domain.sourceCurrency)
+        assertEquals(BigDecimal("100.0000"), domain.sourceAmount)
+        assertEquals("EUR", domain.targetCurrency)
+        assertEquals(BigDecimal("91.5000"), domain.targetAmount)
         assertEquals(BigDecimal("0.91500000"), domain.exchangeRate)
-        assertEquals(now, domain.createdAt)
+        assertEquals(now.atOffset(ZoneOffset.UTC), domain.createdAt)
     }
 
     @Test
     fun `toEntity maps all fields correctly`() {
-        val tx = Transaction.create(
-            userId = UserId.generate(),
+        val tx = Transaction(
+            id = UUID.randomUUID(),
+            userId = UUID.randomUUID(),
             idempotencyKey = UUID.randomUUID(),
-            sourceMoney = Money(BigDecimal("200.00"), Currency.USD),
-            targetCurrency = Currency.EUR,
-            exchangeRate = BigDecimal("0.92")
+            sourceCurrency = "USD",
+            sourceAmount = BigDecimal("200.00"),
+            targetCurrency = "EUR",
+            targetAmount = BigDecimal("184.00"),
+            exchangeRate = BigDecimal("0.92"),
         )
 
         val entity = mapper.toEntity(tx)
 
-        assertEquals(tx.id.value, entity.id)
-        assertEquals(tx.userId.value, entity.userId)
+        assertEquals(tx.id, entity.id)
+        assertEquals(tx.userId, entity.userId)
         assertEquals("USD", entity.sourceCurrency)
         assertEquals("EUR", entity.targetCurrency)
         assertEquals(tx.exchangeRate, entity.exchangeRate)
-        assertEquals(tx.sourceMoney.amount, entity.sourceAmount)
-        assertEquals(tx.targetMoney.amount, entity.targetAmount)
+        assertEquals(tx.sourceAmount, entity.sourceAmount)
+        assertEquals(tx.targetAmount, entity.targetAmount)
     }
 
     @Test
@@ -73,7 +73,7 @@ class TransactionMapperTest {
             id = id, userId = userId, idempotencyKey = idKey,
             sourceCurrency = "USD", sourceAmount = BigDecimal("50.0000"),
             targetCurrency = "BRL", targetAmount = BigDecimal("250.0000"),
-            exchangeRate = BigDecimal("5.00000000"), createdAt = now
+            exchangeRate = BigDecimal("5.00000000"), createdAt = now,
         )
 
         val roundTrip = mapper.toEntity(mapper.toDomain(entity))
@@ -88,4 +88,3 @@ class TransactionMapperTest {
         assertEquals(entity.exchangeRate, roundTrip.exchangeRate)
     }
 }
-

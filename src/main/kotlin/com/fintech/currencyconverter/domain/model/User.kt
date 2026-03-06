@@ -1,22 +1,14 @@
 package com.fintech.currencyconverter.domain.model
 
-import java.time.Instant
+import java.time.OffsetDateTime
+import java.util.UUID
 
 data class User(
-    val id: UserId,
+    val id: UUID,
     val email: String,
     val passwordDigest: String,
-    val createdAt: Instant = Instant.now(),
-    val updatedAt: Instant = Instant.now()
-) {
-    init {
-        require(email.contains('@')) { "Invalid email: $email" }
-        require(passwordDigest.isNotBlank()) { "Password digest must not be blank" }
-    }
+    val createdAt: OffsetDateTime = OffsetDateTime.now(),
+    val updatedAt: OffsetDateTime = OffsetDateTime.now(),
+)
 
-    companion object {
-        fun create(email: String, passwordDigest: String): User =
-            User(id = UserId.generate(), email = email, passwordDigest = passwordDigest)
-    }
-}
 

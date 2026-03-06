@@ -11,12 +11,19 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.security.crypto.password.PasswordEncoder
+import java.util.UUID
 
 class UserServiceTest {
 
     private val userRepository = mockk<UserRepository>()
     private val passwordEncoder = mockk<PasswordEncoder>()
     private val service = UserService(userRepository, passwordEncoder)
+
+    private fun buildUser(email: String = "user@example.com") = User(
+        id = UUID.randomUUID(),
+        email = email,
+        passwordDigest = "hashed",
+    )
 
     @Test
     fun `register throws EmailAlreadyRegisteredException when email taken`() {
@@ -51,9 +58,9 @@ class UserServiceTest {
 
     @Test
     fun `authenticate throws AuthenticationException when password wrong`() {
-        val user = User.create("user@example.com", "hash")
+        val user = buildUser("user@example.com")
         every { userRepository.findByEmail("user@example.com") } returns user
-        every { passwordEncoder.matches("wrong", "hash") } returns false
+        every { passwordEncoder.matches("wrong", "hashed") } returns false
 
         assertThrows<AuthenticationException> {
             service.authenticate("user@example.com", "wrong")
@@ -62,13 +69,12 @@ class UserServiceTest {
 
     @Test
     fun `authenticate returns user on valid credentials`() {
-        val user = User.create("user@example.com", "hash")
+        val user = buildUser("user@example.com")
         every { userRepository.findByEmail("user@example.com") } returns user
-        every { passwordEncoder.matches("correct", "hash") } returns true
+        every { passwordEncoder.matches("correct", "hashed") } returns true
 
         val result = service.authenticate("user@example.com", "correct")
 
         assertEquals(user, result)
     }
 }
-

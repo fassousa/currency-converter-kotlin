@@ -1,32 +1,27 @@
 package com.fintech.currencyconverter.domain.model
 
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
+import java.time.OffsetDateTime
+import java.util.UUID
 
 class UserTest {
 
     @Test
     fun `create with valid email and password succeeds`() {
-        val user = User.create("alice@example.com", "hash")
+        val user = User(id = UUID.randomUUID(), email = "alice@example.com", passwordDigest = "hash")
         assertEquals("alice@example.com", user.email)
         assertEquals("hash", user.passwordDigest)
         assertNotNull(user.id)
     }
 
     @Test
-    fun `email without at-sign throws IllegalArgumentException`() {
-        assertThrows<IllegalArgumentException> { User.create("invalidemail.com", "hash") }
-    }
-
-    @Test
-    fun `blank passwordDigest throws IllegalArgumentException`() {
-        assertThrows<IllegalArgumentException> { User.create("alice@example.com", "  ") }
-    }
-
-    @Test
-    fun `empty passwordDigest throws IllegalArgumentException`() {
-        assertThrows<IllegalArgumentException> { User.create("alice@example.com", "") }
+    fun `two users with same email are equal when ids match`() {
+        val id = UUID.randomUUID()
+        val now = OffsetDateTime.now()
+        val u1 = User(id = id, email = "alice@example.com", passwordDigest = "hash", createdAt = now, updatedAt = now)
+        val u2 = User(id = id, email = "alice@example.com", passwordDigest = "hash", createdAt = now, updatedAt = now)
+        assertEquals(u1, u2)
     }
 }
-

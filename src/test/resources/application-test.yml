@@ -16,7 +16,7 @@ spring:
   flyway:
     enabled: false
 
-  # Disable Redis and cache for unit tests — use Testcontainers for integration tests
+  # Disable Redis and cache for unit tests
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
@@ -26,9 +26,33 @@ spring:
   cache:
     type: none
 
-  # Disable security auto-password logging noise
   security:
     user:
       name: test
       password: test
+
+# Application config for tests
+app:
+  jwt:
+    secret: dGVzdC1zZWNyZXQta2V5LWZvci10ZXN0aW5nLW9ubHk=
+    expiration: 3600000
+  currency-api:
+    url: http://localhost:8089
+    api-key: test-api-key
+
+# Resilience4j — shorter waits for tests
+resilience4j:
+  circuitbreaker:
+    instances:
+      exchangeRates:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 5s
+        minimum-number-of-calls: 5
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: false
+  retry:
+    instances:
+      exchangeRates:
+        max-attempts: 1
 

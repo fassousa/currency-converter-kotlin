@@ -1,15 +1,9 @@
 package com.fintech.currencyconverter.application.service
 
 import com.fintech.currencyconverter.application.event.TransactionCreatedEvent
-import com.fintech.currencyconverter.domain.exception.UserNotFoundException
-import com.fintech.currencyconverter.domain.model.Currency
-import com.fintech.currencyconverter.domain.model.Money
 import com.fintech.currencyconverter.domain.model.Transaction
-import com.fintech.currencyconverter.domain.model.User
-import com.fintech.currencyconverter.domain.model.UserId
 import com.fintech.currencyconverter.port.outbound.ExchangeRateGateway
 import com.fintech.currencyconverter.port.outbound.TransactionRepository
-import com.fintech.currencyconverter.port.outbound.UserRepository
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -18,66 +12,60 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.springframework.context.ApplicationEventPublisher
 import java.math.BigDecimal
+import java.time.OffsetDateTime
 import java.util.UUID
 
 class CurrencyConversionServiceTest {
 
-    private val userRepository = mockk<UserRepository>()
     private val transactionRepository = mockk<TransactionRepository>()
     private val exchangeRateGateway = mockk<ExchangeRateGateway>()
     private val eventPublisher = mockk<ApplicationEventPublisher>(relaxed = true)
-    private val service = CurrencyConversionService(
-        userRepository, transactionRepository, exchangeRateGateway, eventPublisher
+    private val service = CurrencyConversionService(transactionRepository, exchangeRateGateway, eventPublisher)
+
+    private val userId = UUID.randomUUID()
+    private val idempotencyKey = UUID.randomUUID()
+
+    private fun buildTx(userId: UUID = this.userId, idempotencyKey: UUID = this.idempotencyKey) = Transaction(
+        id = UUID.randomUUID(),
+        userId = userId,
+        idempotencyKey = idempotencyKey,
+        sourceCurrency = "USD",
+        sourceAmount = BigDecimal("100.00"),
+        targetCurrency = "EUR",
+        targetAmount = BigDecimal("92.0000"),
+        exchangeRate = BigDecimal("0.92"),
+        createdAt = OffsetDateTime.now(),
     )
 
-    private val userId = UserId.generate()
-    private val idempotencyKey = UUID.randomUUID()
-    private val sourceMoney = Money(BigDecimal("100.00"), Currency.USD)
-    private val user = User.create("test@example.com", "hash")
-
     @BeforeEach
-    fun setUp() {
-        clearAllMocks()
-    }
+    fun setUp() { clearAllMocks() }
 
     @Test
     fun `convert returns existing transaction when idempotency key already exists`() {
-        val existing = Transaction.create(userId, idempotencyKey, sourceMoney, Currency.EUR, BigDecimal("0.92"))
+        val existing = buildTx()
         every { transactionRepository.findByIdempotencyKey(idempotencyKey) } returns existing
 
-        val result = service.convert(userId, idempotencyKey, sourceMoney, Currency.EUR)
+        val result = service.convert(userId, idempotencyKey, "USD", BigDecimal("100.00"), "EUR")
 
         assertEquals(existing, result)
-        verify(exactly = 0) { userRepository.findById(any()) }
         verify(exactly = 0) { eventPublisher.publishEvent(any()) }
-    }
-
-    @Test
-    fun `convert throws UserNotFoundException when user does not exist`() {
-        every { transactionRepository.findByIdempotencyKey(idempotencyKey) } returns null
-        every { userRepository.findById(userId) } returns null
-
-        assertThrows<UserNotFoundException> {
-            service.convert(userId, idempotencyKey, sourceMoney, Currency.EUR)
-        }
     }
 
     @Test
     fun `convert saves transaction and publishes event on success`() {
         every { transactionRepository.findByIdempotencyKey(idempotencyKey) } returns null
-        every { userRepository.findById(userId) } returns user
-        every { exchangeRateGateway.getRate(Currency.USD, Currency.EUR) } returns BigDecimal("0.92")
+        every { exchangeRateGateway.getRate("USD", "EUR") } returns BigDecimal("0.92")
         val savedTx = slot<Transaction>()
         every { transactionRepository.save(capture(savedTx)) } answers { savedTx.captured }
 
-        val result = service.convert(userId, idempotencyKey, sourceMoney, Currency.EUR)
+        val result = service.convert(userId, idempotencyKey, "USD", BigDecimal("100.00"), "EUR")
 
         assertEquals(userId, result.userId)
         assertEquals(idempotencyKey, result.idempotencyKey)
+        assertEquals("USD", result.sourceCurrency)
+        assertEquals("EUR", result.targetCurrency)
         verify { eventPublisher.publishEvent(ofType<TransactionCreatedEvent>()) }
     }
 }
-

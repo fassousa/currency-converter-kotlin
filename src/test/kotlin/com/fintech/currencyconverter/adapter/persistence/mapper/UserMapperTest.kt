@@ -2,10 +2,10 @@ package com.fintech.currencyconverter.adapter.persistence.mapper
 
 import com.fintech.currencyconverter.adapter.persistence.entity.UserJpaEntity
 import com.fintech.currencyconverter.domain.model.User
-import com.fintech.currencyconverter.domain.model.UserId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.time.Instant
+import java.time.ZoneOffset
 import java.util.UUID
 
 class UserMapperTest {
@@ -20,20 +20,20 @@ class UserMapperTest {
 
         val domain = mapper.toDomain(entity)
 
-        assertEquals(UserId(id), domain.id)
+        assertEquals(id, domain.id)
         assertEquals("bob@example.com", domain.email)
         assertEquals("hash", domain.passwordDigest)
-        assertEquals(now, domain.createdAt)
-        assertEquals(now, domain.updatedAt)
+        assertEquals(now.atOffset(ZoneOffset.UTC), domain.createdAt)
+        assertEquals(now.atOffset(ZoneOffset.UTC), domain.updatedAt)
     }
 
     @Test
     fun `toEntity maps all fields correctly`() {
-        val user = User.create("alice@example.com", "digest")
+        val user = User(id = UUID.randomUUID(), email = "alice@example.com", passwordDigest = "digest")
 
         val entity = mapper.toEntity(user)
 
-        assertEquals(user.id.value, entity.id)
+        assertEquals(user.id, entity.id)
         assertEquals("alice@example.com", entity.email)
         assertEquals("digest", entity.passwordDigest)
     }
@@ -51,4 +51,3 @@ class UserMapperTest {
         assertEquals(entity.passwordDigest, roundTrip.passwordDigest)
     }
 }
-

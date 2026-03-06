@@ -1,9 +1,8 @@
 package com.fintech.currencyconverter.port.inbound
 
 import com.fintech.currencyconverter.domain.model.Transaction
-import com.fintech.currencyconverter.domain.model.UserId
+import java.util.UUID
 
 interface GetTransactionHistoryUseCase {
-    fun getHistory(userId: UserId, page: Int, size: Int): List<Transaction>
+    fun getHistory(userId: UUID, page: Int, size: Int): List<Transaction>
 }
-
