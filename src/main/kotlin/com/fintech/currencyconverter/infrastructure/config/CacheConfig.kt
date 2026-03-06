@@ -25,7 +25,7 @@ class CacheConfig {
     ): RedisCacheManager {
         val serializer = GenericJackson2JsonRedisSerializer(objectMapper)
         val defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
-            .entryTtl(Duration.ofHours(24))
+            .entryTtl(Duration.ofHours(CACHE_TTL_HOURS))
             .serializeKeysWith(
                 RedisSerializationContext.SerializationPair.fromSerializer(StringRedisSerializer()),
             )
@@ -38,9 +38,13 @@ class CacheConfig {
             .cacheDefaults(defaultConfig)
             .withCacheConfiguration(
                 "exchangeRates",
-                defaultConfig.entryTtl(Duration.ofHours(24)),
+                defaultConfig.entryTtl(Duration.ofHours(CACHE_TTL_HOURS)),
             )
             .build()
+    }
+
+    companion object {
+        private const val CACHE_TTL_HOURS = 24L
     }
 }
 

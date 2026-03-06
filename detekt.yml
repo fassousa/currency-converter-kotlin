@@ -9,7 +9,8 @@ performance:
 
 complexity:
   LongParameterList:
-    # JPA @Entity primary constructors map one parameter per database column.
-    # TransactionJpaEntity has 9 columns — suppressing the threshold at the rule
-    # level avoids @Suppress noise on every JPA entity in the project.
+    # JPA @Entity primary constructors and domain factory methods (e.g. Transaction.create())
+    # map one parameter per database column.
+    # Raising both thresholds avoids @Suppress noise across entities and factories.
+    functionThreshold: 10
     constructorThreshold: 10

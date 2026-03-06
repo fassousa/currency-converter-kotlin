@@ -52,7 +52,7 @@ class TransactionController(
         authentication: Authentication,
     ): ResponseEntity<PageResult<TransactionResponse>> {
         val jwtAuth = authentication as JwtAuthenticationToken
-        val clampedSize = size.coerceIn(1, 100)
+        val clampedSize = size.coerceIn(1, MAX_PAGE_SIZE)
         val clampedPage = page.coerceAtLeast(0)
         val result = getTransactionsUseCase.execute(jwtAuth.userId, clampedPage, clampedSize)
         return ResponseEntity.ok(PageResult(
@@ -62,6 +62,10 @@ class TransactionController(
             totalElements = result.totalElements,
             totalPages = result.totalPages,
         ))
+    }
+
+    companion object {
+        private const val MAX_PAGE_SIZE = 100
     }
 }
 

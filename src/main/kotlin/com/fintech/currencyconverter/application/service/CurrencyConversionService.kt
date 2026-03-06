@@ -1,6 +1,7 @@
 package com.fintech.currencyconverter.application.service
 
 import com.fintech.currencyconverter.application.event.TransactionCreatedEvent
+import com.fintech.currencyconverter.domain.model.Money
 import com.fintech.currencyconverter.domain.model.Transaction
 import com.fintech.currencyconverter.port.inbound.ConvertCurrencyUseCase
 import com.fintech.currencyconverter.port.outbound.ExchangeRateGateway
@@ -29,7 +30,7 @@ class CurrencyConversionService(
         transactionRepository.findByIdempotencyKey(idempotencyKey)?.let { return it }
 
         val rate = exchangeRateGateway.getRate(sourceCurrency, targetCurrency)
-        val targetAmount = sourceAmount.multiply(rate).setScale(4, RoundingMode.HALF_EVEN)
+        val targetAmount = sourceAmount.multiply(rate).setScale(Money.MONETARY_SCALE, RoundingMode.HALF_EVEN)
 
         val transaction = Transaction(
             id = UUID.randomUUID(),

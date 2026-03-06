@@ -34,8 +34,12 @@ class TransactionTest {
     fun `two transactions with same id are equal`() {
         val id = UUID.randomUUID()
         val now = java.time.OffsetDateTime.now()
-        val t1 = Transaction(id, userId, idempotencyKey, "USD", BigDecimal("100"), "EUR", BigDecimal("90"), BigDecimal("0.9"), now)
-        val t2 = Transaction(id, userId, idempotencyKey, "USD", BigDecimal("100"), "EUR", BigDecimal("90"), BigDecimal("0.9"), now)
+        val t1 = Transaction(
+            id, userId, idempotencyKey, "USD", BigDecimal("100"), "EUR", BigDecimal("90"), BigDecimal("0.9"), now,
+        )
+        val t2 = Transaction(
+            id, userId, idempotencyKey, "USD", BigDecimal("100"), "EUR", BigDecimal("90"), BigDecimal("0.9"), now,
+        )
         assertEquals(t1, t2)
     }
 

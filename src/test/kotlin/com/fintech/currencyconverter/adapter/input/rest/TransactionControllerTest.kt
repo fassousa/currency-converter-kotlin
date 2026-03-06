@@ -44,7 +44,10 @@ class TransactionControllerTest {
 
     @MockkBean private lateinit var createTransactionUseCase: CreateTransactionUseCase
     @MockkBean private lateinit var getTransactionsUseCase: GetTransactionsUseCase
+    // Required by JwtAuthenticationFilter (imported via @Import); not referenced directly in tests
+    @Suppress("UnusedPrivateProperty")
     @MockkBean private lateinit var jwtService: JwtService
+    @Suppress("UnusedPrivateProperty")
     @MockkBean private lateinit var tokenRevocationService: TokenRevocationService
 
     private val userId = UUID.randomUUID()
