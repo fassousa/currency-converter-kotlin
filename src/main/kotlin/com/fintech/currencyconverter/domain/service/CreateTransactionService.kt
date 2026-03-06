@@ -5,22 +5,19 @@ import com.fintech.currencyconverter.domain.port.input.CreateTransactionCommand
 import com.fintech.currencyconverter.domain.port.input.CreateTransactionUseCase
 import com.fintech.currencyconverter.domain.port.output.ExchangeRateGateway
 import com.fintech.currencyconverter.domain.port.output.TransactionRepositoryPort
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import java.math.RoundingMode
 import java.util.UUID
 
-@Service
 class CreateTransactionService(
     private val transactionRepository: TransactionRepositoryPort,
     private val exchangeRateGateway: ExchangeRateGateway,
 ) : CreateTransactionUseCase {
 
-    @Transactional
     override fun execute(command: CreateTransactionCommand): Transaction {
+        transactionRepository.findByIdempotencyKey(command.idempotencyKey)?.let { return it }
         val rate = exchangeRateGateway.getRate(command.sourceCurrency, command.targetCurrency)
         val targetAmount = command.sourceAmount.multiply(rate).setScale(4, RoundingMode.HALF_EVEN)
-        val transaction = Transaction(
+        val transaction = Transaction.create(
             id = UUID.randomUUID(),
             userId = command.userId,
             idempotencyKey = command.idempotencyKey,

@@ -4,9 +4,7 @@ import com.fintech.currencyconverter.adapter.persistence.mapper.TransactionMappe
 import com.fintech.currencyconverter.adapter.persistence.repository.TransactionJpaRepository
 import com.fintech.currencyconverter.domain.model.Transaction
 import com.fintech.currencyconverter.port.outbound.TransactionRepository
-import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Component
 import java.util.UUID
@@ -30,9 +28,6 @@ class TransactionPersistenceAdapter(
         val pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
         return jpaRepository.findAllByUserId(userId, pageable).map(mapper::toDomain)
     }
-
-    override fun findByUserId(userId: UUID, pageable: Pageable): Page<Transaction> =
-        jpaRepository.findPageByUserId(userId, pageable).map(mapper::toDomain)
 }
 
 
