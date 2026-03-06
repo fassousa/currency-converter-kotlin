@@ -3,6 +3,7 @@ package com.fintech.currencyconverter.application.service
 import com.fintech.currencyconverter.domain.exception.AuthenticationException
 import com.fintech.currencyconverter.domain.exception.EmailAlreadyRegisteredException
 import com.fintech.currencyconverter.domain.model.User
+import com.fintech.currencyconverter.domain.port.output.PasswordHasher
 import com.fintech.currencyconverter.port.outbound.UserRepository
 import io.mockk.every
 import io.mockk.mockk
@@ -10,14 +11,13 @@ import io.mockk.slot
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.springframework.security.crypto.password.PasswordEncoder
 import java.util.UUID
 
 class UserServiceTest {
 
     private val userRepository = mockk<UserRepository>()
-    private val passwordEncoder = mockk<PasswordEncoder>()
-    private val service = UserService(userRepository, passwordEncoder)
+    private val passwordHasher = mockk<PasswordHasher>()
+    private val service = UserService(userRepository, passwordHasher)
 
     private fun buildUser(email: String = "user@example.com") = User(
         id = UUID.randomUUID(),
@@ -37,7 +37,7 @@ class UserServiceTest {
     @Test
     fun `register saves and returns new user`() {
         every { userRepository.existsByEmail("new@example.com") } returns false
-        every { passwordEncoder.encode("password") } returns "hashed"
+        every { passwordHasher.hash("password") } returns "hashed"
         val savedUser = slot<User>()
         every { userRepository.save(capture(savedUser)) } answers { savedUser.captured }
 
@@ -60,7 +60,7 @@ class UserServiceTest {
     fun `authenticate throws AuthenticationException when password wrong`() {
         val user = buildUser("user@example.com")
         every { userRepository.findByEmail("user@example.com") } returns user
-        every { passwordEncoder.matches("wrong", "hashed") } returns false
+        every { passwordHasher.matches("wrong", "hashed") } returns false
 
         assertThrows<AuthenticationException> {
             service.authenticate("user@example.com", "wrong")
@@ -71,7 +71,7 @@ class UserServiceTest {
     fun `authenticate returns user on valid credentials`() {
         val user = buildUser("user@example.com")
         every { userRepository.findByEmail("user@example.com") } returns user
-        every { passwordEncoder.matches("correct", "hashed") } returns true
+        every { passwordHasher.matches("correct", "hashed") } returns true
 
         val result = service.authenticate("user@example.com", "correct")
 
