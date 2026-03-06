@@ -19,6 +19,9 @@ class TransactionRepositoryPortAdapter(
     override fun save(transaction: Transaction): Transaction =
         mapper.toDomain(jpaRepository.save(mapper.toEntity(transaction)))
 
+    override fun findByIdempotencyKey(key: UUID): Transaction? =
+        jpaRepository.findByIdempotencyKey(key)?.let(mapper::toDomain)
+
     override fun findByUserId(userId: UUID, page: Int, size: Int): PageResult<Transaction> {
         val pageable = PageRequest.of(page, size, Sort.by("createdAt").descending())
         val springPage = jpaRepository.findPageByUserId(userId, pageable)

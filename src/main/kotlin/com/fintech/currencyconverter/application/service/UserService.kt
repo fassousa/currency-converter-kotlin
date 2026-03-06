@@ -7,12 +7,12 @@ import com.fintech.currencyconverter.domain.port.output.PasswordHasher
 import com.fintech.currencyconverter.port.inbound.AuthenticateUserUseCase
 import com.fintech.currencyconverter.port.inbound.RegisterUserUseCase
 import com.fintech.currencyconverter.port.outbound.UserRepository
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
-@Service
-@Transactional
+/**
+ * Application service for user registration and authentication.
+ * Pure class: no Spring annotations. Transactional boundaries enforced at the JPA adapter layer.
+ */
 class UserService(
     private val userRepository: UserRepository,
     private val passwordHasher: PasswordHasher,

@@ -3,12 +3,12 @@ package com.fintech.currencyconverter.application.service
 import com.fintech.currencyconverter.domain.model.Transaction
 import com.fintech.currencyconverter.port.inbound.GetTransactionHistoryUseCase
 import com.fintech.currencyconverter.port.outbound.TransactionRepository
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
-@Service
-@Transactional(readOnly = true)
+/**
+ * Application service for retrieving transaction history.
+ * Pure class: no Spring annotations. Transactional boundaries enforced at the JPA adapter layer.
+ */
 class TransactionHistoryService(
     private val transactionRepository: TransactionRepository,
 ) : GetTransactionHistoryUseCase {

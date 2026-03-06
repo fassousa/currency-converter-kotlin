@@ -6,13 +6,13 @@ import com.fintech.currencyconverter.port.inbound.ConvertCurrencyUseCase
 import com.fintech.currencyconverter.port.outbound.ExchangeRateGateway
 import com.fintech.currencyconverter.port.outbound.TransactionRepository
 import org.springframework.context.ApplicationEventPublisher
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import java.math.RoundingMode
 import java.util.UUID
 
-@Service
-@Transactional
+/**
+ * Application service for currency conversion.
+ * Pure class: no Spring annotations. Transactional boundaries enforced at the JPA adapter layer.
+ */
 class CurrencyConversionService(
     private val transactionRepository: TransactionRepository,
     private val exchangeRateGateway: ExchangeRateGateway,
