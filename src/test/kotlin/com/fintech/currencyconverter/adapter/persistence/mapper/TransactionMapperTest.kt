@@ -1,0 +1,91 @@
+package com.fintech.currencyconverter.adapter.persistence.mapper
+
+import com.fintech.currencyconverter.adapter.persistence.entity.TransactionJpaEntity
+import com.fintech.currencyconverter.domain.model.Currency
+import com.fintech.currencyconverter.domain.model.Money
+import com.fintech.currencyconverter.domain.model.Transaction
+import com.fintech.currencyconverter.domain.model.TransactionId
+import com.fintech.currencyconverter.domain.model.UserId
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import java.math.BigDecimal
+import java.time.Instant
+import java.util.UUID
+
+class TransactionMapperTest {
+
+    private val mapper = TransactionMapper()
+
+    @Test
+    fun `toDomain maps all fields correctly`() {
+        val id = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        val idKey = UUID.randomUUID()
+        val now = Instant.now()
+        val entity = TransactionJpaEntity(
+            id = id, userId = userId, idempotencyKey = idKey,
+            sourceCurrency = "USD", sourceAmount = BigDecimal("100.0000"),
+            targetCurrency = "EUR", targetAmount = BigDecimal("91.5000"),
+            exchangeRate = BigDecimal("0.91500000"), createdAt = now
+        )
+
+        val domain = mapper.toDomain(entity)
+
+        assertEquals(TransactionId(id), domain.id)
+        assertEquals(UserId(userId), domain.userId)
+        assertEquals(idKey, domain.idempotencyKey)
+        assertEquals(Currency.USD, domain.sourceMoney.currency)
+        assertEquals(BigDecimal("100.0000"), domain.sourceMoney.amount)
+        assertEquals(Currency.EUR, domain.targetMoney.currency)
+        assertEquals(BigDecimal("91.5000"), domain.targetMoney.amount)
+        assertEquals(BigDecimal("0.91500000"), domain.exchangeRate)
+        assertEquals(now, domain.createdAt)
+    }
+
+    @Test
+    fun `toEntity maps all fields correctly`() {
+        val tx = Transaction.create(
+            userId = UserId.generate(),
+            idempotencyKey = UUID.randomUUID(),
+            sourceMoney = Money(BigDecimal("200.00"), Currency.USD),
+            targetCurrency = Currency.EUR,
+            exchangeRate = BigDecimal("0.92")
+        )
+
+        val entity = mapper.toEntity(tx)
+
+        assertEquals(tx.id.value, entity.id)
+        assertEquals(tx.userId.value, entity.userId)
+        assertEquals("USD", entity.sourceCurrency)
+        assertEquals("EUR", entity.targetCurrency)
+        assertEquals(tx.exchangeRate, entity.exchangeRate)
+        assertEquals(tx.sourceMoney.amount, entity.sourceAmount)
+        assertEquals(tx.targetMoney.amount, entity.targetAmount)
+    }
+
+    @Test
+    fun `round-trip toDomain then toEntity preserves identity`() {
+        val id = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        val idKey = UUID.randomUUID()
+        val now = Instant.now()
+        val entity = TransactionJpaEntity(
+            id = id, userId = userId, idempotencyKey = idKey,
+            sourceCurrency = "USD", sourceAmount = BigDecimal("50.0000"),
+            targetCurrency = "BRL", targetAmount = BigDecimal("250.0000"),
+            exchangeRate = BigDecimal("5.00000000"), createdAt = now
+        )
+
+        val roundTrip = mapper.toEntity(mapper.toDomain(entity))
+
+        assertEquals(entity.id, roundTrip.id)
+        assertEquals(entity.userId, roundTrip.userId)
+        assertEquals(entity.idempotencyKey, roundTrip.idempotencyKey)
+        assertEquals(entity.sourceCurrency, roundTrip.sourceCurrency)
+        assertEquals(entity.sourceAmount, roundTrip.sourceAmount)
+        assertEquals(entity.targetCurrency, roundTrip.targetCurrency)
+        assertEquals(entity.targetAmount, roundTrip.targetAmount)
+        assertEquals(entity.exchangeRate, roundTrip.exchangeRate)
+    }
+}
+
