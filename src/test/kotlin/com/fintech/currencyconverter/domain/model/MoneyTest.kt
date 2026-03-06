@@ -48,10 +48,19 @@ class MoneyTest {
     }
 
     @Test
-    fun `convertTo rounds to 4 decimal places with HALF_UP`() {
+    fun `convertTo rounds to 4 decimal places with HALF_EVEN (Banker's Rounding)`() {
+        // 1.00 * 0.12345 = 0.12345 — the digit before the 5 is 4 (even), so HALF_EVEN rounds DOWN to 0.1234
         val money = Money(BigDecimal("1.00"), Currency.USD)
-        val result = money.convertTo(Currency.EUR, BigDecimal("0.123456"))
-        assertEquals(BigDecimal("0.1235"), result.amount)
+        val result = money.convertTo(Currency.EUR, BigDecimal("0.12345"))
+        assertEquals(BigDecimal("0.1234"), result.amount)
+    }
+
+    @Test
+    fun `convertTo rounds half-up when preceding digit is odd (HALF_EVEN)`() {
+        // 1.00 * 0.12355 = 0.12355 — the digit before the 5 is 5 (odd), so HALF_EVEN rounds UP to 0.1236
+        val money = Money(BigDecimal("1.00"), Currency.USD)
+        val result = money.convertTo(Currency.EUR, BigDecimal("0.12355"))
+        assertEquals(BigDecimal("0.1236"), result.amount)
     }
 }
 
