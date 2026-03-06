@@ -1,5 +1,6 @@
 package com.fintech.currencyconverter.domain.service
 
+import com.fintech.currencyconverter.domain.model.Money
 import com.fintech.currencyconverter.domain.model.Transaction
 import com.fintech.currencyconverter.domain.port.input.CreateTransactionCommand
 import com.fintech.currencyconverter.domain.port.input.CreateTransactionUseCase
@@ -15,7 +16,7 @@ class CreateTransactionService(
 
     override fun execute(command: CreateTransactionCommand): Transaction {
         val rate = exchangeRateGateway.getRate(command.sourceCurrency, command.targetCurrency)
-        val targetAmount = command.sourceAmount.multiply(rate).setScale(4, RoundingMode.HALF_EVEN)
+        val targetAmount = command.sourceAmount.multiply(rate).setScale(Money.MONETARY_SCALE, RoundingMode.HALF_EVEN)
         val transaction = Transaction.create(
             id = UUID.randomUUID(),
             userId = command.userId,

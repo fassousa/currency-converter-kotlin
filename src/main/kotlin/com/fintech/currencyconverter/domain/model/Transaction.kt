@@ -16,6 +16,8 @@ data class Transaction(
     val createdAt: OffsetDateTime = OffsetDateTime.now(),
 ) {
     companion object {
+        private const val CURRENCY_CODE_LENGTH = 3
+
         fun create(
             id: UUID,
             userId: UUID,
@@ -30,14 +32,19 @@ data class Transaction(
             require(sourceAmount > BigDecimal.ZERO) { "sourceAmount must be > 0" }
             require(targetAmount > BigDecimal.ZERO) { "targetAmount must be > 0" }
             require(exchangeRate > BigDecimal.ZERO) { "exchangeRate must be > 0" }
-            require(sourceCurrency.length == 3 && sourceCurrency == sourceCurrency.uppercase()) {
-                "sourceCurrency must be a 3-character uppercase code"
-            }
-            require(targetCurrency.length == 3 && targetCurrency == targetCurrency.uppercase()) {
-                "targetCurrency must be a 3-character uppercase code"
-            }
+            require(
+                sourceCurrency.length == CURRENCY_CODE_LENGTH &&
+                    sourceCurrency == sourceCurrency.uppercase(),
+            ) { "sourceCurrency must be a 3-character uppercase code" }
+            require(
+                targetCurrency.length == CURRENCY_CODE_LENGTH &&
+                    targetCurrency == targetCurrency.uppercase(),
+            ) { "targetCurrency must be a 3-character uppercase code" }
             require(sourceCurrency != targetCurrency) { "sourceCurrency must differ from targetCurrency" }
-            return Transaction(id, userId, idempotencyKey, sourceCurrency, sourceAmount, targetCurrency, targetAmount, exchangeRate, createdAt)
+            return Transaction(
+                id, userId, idempotencyKey, sourceCurrency, sourceAmount,
+                targetCurrency, targetAmount, exchangeRate, createdAt,
+            )
         }
     }
 }

@@ -45,9 +45,14 @@ class AuthController(
     @PostMapping("/sign_out")
     fun signOut(authentication: Authentication): ResponseEntity<Unit> {
         val jwtAuth = authentication as JwtAuthenticationToken
-        val remainingMs = (jwtAuth.expiration.time - System.currentTimeMillis()).coerceAtLeast(1000L)
+        val remainingMs = (jwtAuth.expiration.time - System.currentTimeMillis())
+            .coerceAtLeast(MIN_TOKEN_REMAINING_MS)
         tokenRevocationService.revoke(jwtAuth.jti, Duration.ofMillis(remainingMs))
         return ResponseEntity.noContent().build()
+    }
+
+    companion object {
+        private const val MIN_TOKEN_REMAINING_MS = 1000L
     }
 }
 

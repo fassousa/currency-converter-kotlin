@@ -37,6 +37,7 @@ class GlobalExceptionHandler {
             .body(ErrorResponse("USER_ALREADY_EXISTS", e.message ?: "User already exists"))
 
     @ExceptionHandler(UserNotFoundException::class, InvalidCredentialsException::class)
+    @Suppress("UnusedParameter")
     fun handleAuthFailure(e: RuntimeException): ResponseEntity<ErrorResponse> =
         ResponseEntity
             .status(HttpStatus.UNAUTHORIZED)

@@ -41,6 +41,7 @@ class JwtService(
             .parseSignedClaims(token)
             .payload
 
+    @Suppress("SwallowedException")
     fun isTokenValid(token: String): Boolean =
         try {
             validateToken(token)
