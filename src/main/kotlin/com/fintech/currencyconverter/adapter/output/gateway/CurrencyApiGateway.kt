@@ -34,8 +34,8 @@ class CurrencyApiGateway(
 
     @Suppress("unused")
     private fun fallback(
-        sourceCurrency: String,
-        targetCurrency: String,
+        @Suppress("UNUSED_PARAMETER") sourceCurrency: String,
+        @Suppress("UNUSED_PARAMETER") targetCurrency: String,
         e: Throwable,
     ): BigDecimal =
         throw ExchangeRateUnavailableException(

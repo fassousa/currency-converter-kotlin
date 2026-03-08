@@ -30,7 +30,7 @@ class HealthController(
             "external_api" to checkExternalApi(),
         )
 
-        val allHealthy = checks.values.all { (it as Map<*, *>)["status"] == "up" }
+        val allHealthy = checks.values.all { it["status"] == "up" }
 
         val body = mapOf(
             "status" to if (allHealthy) "healthy" else "unhealthy",
