@@ -9,10 +9,10 @@ services:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB:-currency_converter}
+      - DATABASE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB:-currency_converter}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - SPRING_DATA_REDIS_HOST=redis
+      - REDIS_URL=redis://redis:6379
       - JWT_SECRET=${JWT_SECRET}
       - CURRENCY_API_KEY=${CURRENCY_API_KEY}
       - SERVER_PORT=8080
