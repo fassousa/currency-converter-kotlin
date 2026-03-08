@@ -118,13 +118,13 @@ jobs:
         with:
           name: docker-image
 
-      - name: Copy image to server
+      - name: Copy image and scripts to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: "image.tar.gz,docker-compose.prod.yml,nginx/"
+          source: "image.tar.gz,docker-compose.prod.yml,nginx/,scripts/"
           target: "/home/${{ secrets.DEPLOY_USER }}/currency-converter-kotlin"
 
       - name: Deploy to Digital Ocean
@@ -133,47 +133,70 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          envs: DB_USER,DB_PASSWORD,JWT_SECRET,CURRENCY_API_KEY
           script: |
             set -e
             cd /home/${{ secrets.DEPLOY_USER }}/currency-converter-kotlin
 
-            # Save current image for rollback
-            docker tag currency-converter-kotlin:latest currency-converter-kotlin:rollback 2>/dev/null || true
-
-            echo "📦 Loading new image..."
-            docker load < image.tar.gz
-
-            echo "🗄️  Writing .env.production..."
-            cat > .env.production << 'EOF'
+            # ── Write .env.production (done before everything else so rollback also has it) ──
+            cat > .env.production << ENVEOF
             SPRING_PROFILES_ACTIVE=prod
             POSTGRES_USER=${{ secrets.DB_USER }}
             POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
             POSTGRES_DB=currency_converter
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             CURRENCY_API_KEY=${{ secrets.CURRENCY_API_KEY }}
-            EOF
+            ENVEOF
+
+            # ── Save current image for rollback ──
+            docker tag currency-converter-kotlin:latest currency-converter-kotlin:rollback 2>/dev/null || true
+
+            echo "📦 Loading new image..."
+            docker load < image.tar.gz
 
             echo "🚀 Starting containers..."
             docker compose -f docker-compose.prod.yml --env-file .env.production up -d --no-build
 
-            echo "⏳ Waiting for app to be ready..."
-            sleep 15
-
-            echo "🏥 Health check..."
-            for i in {1..6}; do
-              RESPONSE=$(curl -sf http://localhost:8080/api/v1/health || true)
-              if echo "$RESPONSE" | grep -q "healthy"; then
-                echo "✅ Deploy successful!"
-                docker image prune -f
-                exit 0
+            # ── Wait for Docker healthcheck to report healthy (up to 180 s) ──
+            echo "⏳ Waiting for app container to become healthy (up to 180s)..."
+            ELAPSED=0
+            MAX_WAIT=180
+            RETRY_INTERVAL=10
+            while [ "$ELAPSED" -lt "$MAX_WAIT" ]; do
+              STATUS=$(docker inspect --format='{{.State.Health.Status}}' currency-converter-app 2>/dev/null || echo "missing")
+              echo "  Container status: $STATUS (${ELAPSED}s elapsed)"
+              if [ "$STATUS" = "healthy" ]; then break; fi
+              if [ "$STATUS" = "unhealthy" ]; then
+                echo "  Container is unhealthy — dumping last 50 log lines for diagnosis:"
+                docker logs --tail=50 currency-converter-app || true
+                break
               fi
-              echo "⚠️  Retry $i/6..."
-              sleep 5
+              sleep "$RETRY_INTERVAL"
+              ELAPSED=$((ELAPSED + RETRY_INTERVAL))
             done
 
-            echo "❌ Health check failed! Rolling back..."
-            docker compose -f docker-compose.prod.yml down
-            docker tag currency-converter-kotlin:rollback currency-converter-kotlin:latest
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' currency-converter-app 2>/dev/null || echo "missing")
+            if [ "$STATUS" != "healthy" ]; then
+              echo "❌ Container never became healthy (status: $STATUS). Rolling back..."
+              docker compose -f docker-compose.prod.yml --env-file .env.production down
+              docker tag currency-converter-kotlin:rollback currency-converter-kotlin:latest 2>/dev/null || true
+              docker compose -f docker-compose.prod.yml --env-file .env.production up -d --no-build
+              exit 1
+            fi
+
+            # ── Final HTTP health check against actuator (Spring Boot returns {"status":"UP"}) ──
+            echo "🏥 HTTP health check..."
+            RESPONSE=$(curl -sf http://localhost:8080/api/v1/actuator/health || true)
+            echo "  Response: $RESPONSE"
+            if echo "$RESPONSE" | grep -q '"status":"UP"'; then
+              echo "✅ Deploy successful!"
+              docker image prune -f
+              exit 0
+            fi
+
+            echo "❌ HTTP health check failed. Rolling back..."
+            docker compose -f docker-compose.prod.yml --env-file .env.production down
+            docker tag currency-converter-kotlin:rollback currency-converter-kotlin:latest 2>/dev/null || true
             docker compose -f docker-compose.prod.yml --env-file .env.production up -d --no-build
             exit 1
 
@@ -203,13 +226,22 @@ jobs:
             cd /home/${{ secrets.DEPLOY_USER }}/currency-converter-kotlin
 
             echo "🔄 Rolling back to previous image..."
-            docker compose -f docker-compose.prod.yml down
+            docker compose -f docker-compose.prod.yml --env-file .env.production down
             docker tag currency-converter-kotlin:rollback currency-converter-kotlin:latest
             docker compose -f docker-compose.prod.yml --env-file .env.production up -d --no-build
-            sleep 10
 
-            RESPONSE=$(curl -sf http://localhost:8080/api/v1/health || true)
-            if echo "$RESPONSE" | grep -q "healthy"; then
+            echo "⏳ Waiting for rollback container to become healthy (up to 120s)..."
+            ELAPSED=0
+            while [ "$ELAPSED" -lt 120 ]; do
+              STATUS=$(docker inspect --format='{{.State.Health.Status}}' currency-converter-app 2>/dev/null || echo "missing")
+              echo "  Container status: $STATUS (${ELAPSED}s elapsed)"
+              if [ "$STATUS" = "healthy" ]; then break; fi
+              sleep 10
+              ELAPSED=$((ELAPSED + 10))
+            done
+
+            RESPONSE=$(curl -sf http://localhost:8080/api/v1/actuator/health || true)
+            if echo "$RESPONSE" | grep -q '"status":"UP"'; then
               echo "✅ Rollback successful!"
             else
               echo "❌ Rollback health check failed!"

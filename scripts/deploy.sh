@@ -6,7 +6,7 @@ set -euo pipefail
 COMPOSE_FILE="docker-compose.prod.yml"
 ENV_FILE=".env.production"
 APP_CONTAINER="currency-converter-app"
-HEALTH_URL="http://localhost:8080/api/v1/health"
+HEALTH_URL="http://localhost:8080/api/v1/actuator/health"
 MAX_WAIT=120   # seconds to wait for app to become healthy
 RETRY_INTERVAL=5
 
@@ -57,7 +57,7 @@ fi
 # ── Final HTTP health check ─────────────────────────────────────────────────
 echo "🏥 HTTP health check..."
 RESPONSE=$(curl -sf "$HEALTH_URL" || true)
-if echo "$RESPONSE" | grep -q "healthy"; then
+if echo "$RESPONSE" | grep -q '"status":"UP"'; then
   echo "✅ Deploy successful!"
   docker image prune -f
   exit 0
