@@ -33,7 +33,10 @@ class TransactionController(
     private val getTransactionsUseCase: GetTransactionsUseCase,
 ) {
     @PostMapping
-    @Operation(summary = "Create a currency conversion transaction", description = "Converts an amount from one currency to another. Requires an Idempotency-Key header.")
+    @Operation(
+        summary = "Create a currency conversion transaction",
+        description = "Converts an amount from one currency to another. Requires an Idempotency-Key header.",
+    )
     fun createTransaction(
         @RequestHeader("Idempotency-Key") idempotencyKey: UUID,
         @Valid @RequestBody request: CreateTransactionRequest,
@@ -52,7 +55,10 @@ class TransactionController(
     }
 
     @GetMapping
-    @Operation(summary = "List transactions", description = "Returns a paginated list of currency conversion transactions for the authenticated user")
+    @Operation(
+        summary = "List transactions",
+        description = "Returns a paginated list of currency conversion transactions for the authenticated user",
+    )
     fun getTransactions(
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int,

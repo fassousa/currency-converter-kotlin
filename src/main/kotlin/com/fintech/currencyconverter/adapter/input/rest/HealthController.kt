@@ -2,6 +2,7 @@ package com.fintech.currencyconverter.adapter.input.rest
 
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.springframework.http.HttpStatus
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.http.ResponseEntity
@@ -22,7 +23,10 @@ class HealthController(
 ) {
 
     @GetMapping
-    @Operation(summary = "Check API health status", description = "Returns the health status of the API, database, cache, and external dependencies")
+    @Operation(
+        summary = "Check API health status",
+        description = "Returns the health status of the API, database, cache, and external dependencies",
+    )
     fun health(): ResponseEntity<Map<String, Any>> {
         val checks = mapOf(
             "database" to checkDatabase(),
@@ -40,7 +44,7 @@ class HealthController(
         )
 
         return if (allHealthy) ResponseEntity.ok(body)
-        else ResponseEntity.status(503).body(body)
+        else ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body)
     }
 
     private fun checkDatabase(): Map<String, String> =
