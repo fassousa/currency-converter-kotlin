@@ -108,7 +108,7 @@ jobs:
 
     environment:
       name: production
-      url: https://currencyconverter.duckdns.org
+      url: https://kotlin-converter.duckdns.org
 
     steps:
       - uses: actions/checkout@v4
@@ -146,6 +146,21 @@ jobs:
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             CURRENCY_API_KEY=${{ secrets.CURRENCY_API_KEY }}
             ENVEOF
+
+            # ── Obtain SSL cert if not already present ──
+            CERT_PATH="/etc/letsencrypt/live/kotlin-converter.duckdns.org/fullchain.pem"
+            if [ ! -f "$CERT_PATH" ]; then
+              echo "🔐 SSL cert not found — obtaining via certbot..."
+              # Stop nginx if running so port 80 is free for certbot standalone
+              docker compose -f docker-compose.prod.yml --env-file .env.production stop nginx 2>/dev/null || true
+              sudo apt-get install -y certbot
+              sudo certbot certonly --standalone --non-interactive --agree-tos \
+                -m ${{ secrets.DEPLOY_EMAIL }} \
+                -d kotlin-converter.duckdns.org
+              echo "✅ SSL cert obtained."
+            else
+              echo "✅ SSL cert already exists, skipping certbot."
+            fi
 
             # ── Save current image for rollback ──
             docker tag currency-converter-kotlin:latest currency-converter-kotlin:rollback 2>/dev/null || true
