@@ -1,0 +1,89 @@
+# Production docker-compose — used by CI/CD on the DigitalOcean droplet
+# Run with: docker compose --env-file .env.production up -d --no-build
+
+services:
+  app:
+    image: currency-converter-kotlin:latest
+    container_name: currency-converter-app
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB:-currency_converter}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_DATA_REDIS_HOST=redis
+      - JWT_SECRET=${JWT_SECRET}
+      - CURRENCY_API_KEY=${CURRENCY_API_KEY}
+      - SERVER_PORT=8080
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/api/v1/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - currency-network
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: currency-converter-db
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-currency_converter}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - currency-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: currency-converter-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - currency-network
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: currency-converter-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - app
+    networks:
+      - currency-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  currency-network:
+    driver: bridge
+

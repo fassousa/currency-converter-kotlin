@@ -1,0 +1,222 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  JAVA_VERSION: '21'
+  IMAGE_NAME: currency-converter-kotlin
+
+jobs:
+  # ── Job 1: Tests ─────────────────────────────────────────────────────────────
+  test:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: currency_converter_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant execute permission to gradlew
+        run: chmod +x gradlew
+
+      - name: Run tests
+        env:
+          SPRING_PROFILES_ACTIVE: test
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/currency_converter_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          SPRING_DATA_REDIS_HOST: localhost
+          JWT_SECRET: test-secret-key-for-ci-must-be-at-least-32-chars
+          CURRENCY_API_KEY: test_api_key_for_ci
+        run: ./gradlew test --no-daemon
+
+      - name: Run Detekt (lint)
+        run: ./gradlew detekt --no-daemon
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-report
+          path: build/reports/tests/
+          retention-days: 7
+
+  # ── Job 2: Build Docker image ─────────────────────────────────────────────────
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t ${{ env.IMAGE_NAME }}:${{ github.sha }} -t ${{ env.IMAGE_NAME }}:latest .
+
+      - name: Save Docker image
+        run: docker save ${{ env.IMAGE_NAME }}:latest | gzip > image.tar.gz
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: image.tar.gz
+          retention-days: 1
+
+  # ── Job 3: Deploy ─────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    environment:
+      name: production
+      url: https://currencyconverter.duckdns.org
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Copy image to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: "image.tar.gz,docker-compose.prod.yml,nginx/"
+          target: "/home/${{ secrets.DEPLOY_USER }}/currency-converter-kotlin"
+
+      - name: Deploy to Digital Ocean
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+            cd /home/${{ secrets.DEPLOY_USER }}/currency-converter-kotlin
+
+            # Save current image for rollback
+            docker tag currency-converter-kotlin:latest currency-converter-kotlin:rollback 2>/dev/null || true
+
+            echo "📦 Loading new image..."
+            docker load < image.tar.gz
+
+            echo "🗄️  Writing .env.production..."
+            cat > .env.production << 'EOF'
+            SPRING_PROFILES_ACTIVE=prod
+            POSTGRES_USER=${{ secrets.DB_USER }}
+            POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
+            POSTGRES_DB=currency_converter
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            CURRENCY_API_KEY=${{ secrets.CURRENCY_API_KEY }}
+            EOF
+
+            echo "🚀 Starting containers..."
+            docker compose -f docker-compose.prod.yml --env-file .env.production up -d --no-build
+
+            echo "⏳ Waiting for app to be ready..."
+            sleep 15
+
+            echo "🏥 Health check..."
+            for i in {1..6}; do
+              RESPONSE=$(curl -sf http://localhost:8080/api/v1/health || true)
+              if echo "$RESPONSE" | grep -q "healthy"; then
+                echo "✅ Deploy successful!"
+                docker image prune -f
+                exit 0
+              fi
+              echo "⚠️  Retry $i/6..."
+              sleep 5
+            done
+
+            echo "❌ Health check failed! Rolling back..."
+            docker compose -f docker-compose.prod.yml down
+            docker tag currency-converter-kotlin:rollback currency-converter-kotlin:latest
+            docker compose -f docker-compose.prod.yml --env-file .env.production up -d --no-build
+            exit 1
+
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "🎉 Deployed to http://143.198.21.206:8080"
+          echo "📌 Commit: ${{ github.sha }}"
+          echo "👤 By: ${{ github.actor }}"
+
+  # ── Job 4: Rollback manual ────────────────────────────────────────────────────
+  rollback:
+    name: Rollback
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    environment: production
+
+    steps:
+      - name: Rollback to previous image
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+            cd /home/${{ secrets.DEPLOY_USER }}/currency-converter-kotlin
+
+            echo "🔄 Rolling back to previous image..."
+            docker compose -f docker-compose.prod.yml down
+            docker tag currency-converter-kotlin:rollback currency-converter-kotlin:latest
+            docker compose -f docker-compose.prod.yml --env-file .env.production up -d --no-build
+            sleep 10
+
+            RESPONSE=$(curl -sf http://localhost:8080/api/v1/health || true)
+            if echo "$RESPONSE" | grep -q "healthy"; then
+              echo "✅ Rollback successful!"
+            else
+              echo "❌ Rollback health check failed!"
+              exit 1
+            fi
+
+
+
+
+

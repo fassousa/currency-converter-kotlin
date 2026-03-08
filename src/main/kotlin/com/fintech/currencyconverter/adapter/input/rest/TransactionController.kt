@@ -8,6 +8,9 @@ import com.fintech.currencyconverter.domain.port.input.CreateTransactionCommand
 import com.fintech.currencyconverter.domain.port.input.CreateTransactionUseCase
 import com.fintech.currencyconverter.domain.port.input.GetTransactionsUseCase
 import com.fintech.currencyconverter.infrastructure.security.JwtAuthenticationToken
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -23,11 +26,14 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/transactions")
+@Tag(name = "Transactions", description = "Currency conversion transaction endpoints")
+@SecurityRequirement(name = "bearerAuth")
 class TransactionController(
     private val createTransactionUseCase: CreateTransactionUseCase,
     private val getTransactionsUseCase: GetTransactionsUseCase,
 ) {
     @PostMapping
+    @Operation(summary = "Create a currency conversion transaction", description = "Converts an amount from one currency to another. Requires an Idempotency-Key header.")
     fun createTransaction(
         @RequestHeader("Idempotency-Key") idempotencyKey: UUID,
         @Valid @RequestBody request: CreateTransactionRequest,
@@ -46,6 +52,7 @@ class TransactionController(
     }
 
     @GetMapping
+    @Operation(summary = "List transactions", description = "Returns a paginated list of currency conversion transactions for the authenticated user")
     fun getTransactions(
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int,

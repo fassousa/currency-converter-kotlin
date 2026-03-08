@@ -25,6 +25,7 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.post
 import java.time.OffsetDateTime
 import java.util.Date
@@ -63,7 +64,7 @@ class AuthControllerTest {
         every { jwtService.generateToken(any(), any()) } returns "generated.jwt.token"
 
         val body = SignUpRequest(email = "user@example.com", password = "password123")
-        mockMvc.post("/auth/sign_up") {
+        mockMvc.post("/auth") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(body)
             with(csrf())
@@ -78,7 +79,7 @@ class AuthControllerTest {
         every { registerUserUseCase.execute(any()) } throws UserAlreadyExistsException("user@example.com")
 
         val body = SignUpRequest(email = "user@example.com", password = "password123")
-        mockMvc.post("/auth/sign_up") {
+        mockMvc.post("/auth") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(body)
             with(csrf())
@@ -120,7 +121,7 @@ class AuthControllerTest {
     }
 
     @Test
-    fun `POST sign_out revokes token and returns 204`() {
+    fun `DELETE sign_out revokes token and returns 204`() {
         every { tokenRevocationService.revoke(any(), any()) } just runs
 
         val jwtAuth = JwtAuthenticationToken(
@@ -129,7 +130,7 @@ class AuthControllerTest {
             expiration = Date(System.currentTimeMillis() + 3_600_000),
             authorities = listOf(SimpleGrantedAuthority("ROLE_USER")),
         )
-        mockMvc.post("/auth/sign_out") {
+        mockMvc.delete("/auth/sign_out") {
             with(authentication(jwtAuth))
             with(csrf())
         }.andExpect {
@@ -140,7 +141,7 @@ class AuthControllerTest {
     @Test
     fun `POST sign_up returns 422 for invalid email format`() {
         val body = SignUpRequest(email = "not-an-email", password = "password123")
-        mockMvc.post("/auth/sign_up") {
+        mockMvc.post("/auth") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(body)
             with(csrf())

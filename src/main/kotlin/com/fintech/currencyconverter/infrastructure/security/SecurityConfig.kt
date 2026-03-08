@@ -31,8 +31,9 @@ class SecurityConfig(
             }
             .authorizeHttpRequests {
                 it.requestMatchers(
-                    AntPathRequestMatcher("/auth/sign_up", "POST"),
+                    AntPathRequestMatcher("/auth", "POST"),
                     AntPathRequestMatcher("/auth/sign_in", "POST"),
+                    AntPathRequestMatcher("/health", "GET"),
                     AntPathRequestMatcher("/actuator/**"),
                     AntPathRequestMatcher("/v3/api-docs/**"),
                     AntPathRequestMatcher("/swagger-ui/**"),
