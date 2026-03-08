@@ -20,19 +20,25 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Import
 import org.springframework.data.redis.core.RedisTemplate
+import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
+@Import(CurrencyApiGatewayCircuitBreakerTest.MockRedisConfig::class)
 class CurrencyApiGatewayCircuitBreakerTest {
 
     @TestConfiguration
     class MockRedisConfig {
         @Bean
         fun redisTemplate(): RedisTemplate<String, String> = mockk(relaxed = true)
+
+        @Bean
+        fun stringRedisTemplate(): StringRedisTemplate = mockk(relaxed = true)
     }
 
     companion object {
