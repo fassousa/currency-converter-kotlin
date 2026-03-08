@@ -49,9 +49,9 @@ logging:
 server:
   error:
     include-message: never
-    include-binding-errors: false
+    include-binding-errors: never
     include-stacktrace: never
-    include-exception: false
+    include-exception: never
   compression:
     enabled: true
     min-response-size: 1024
