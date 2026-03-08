@@ -36,8 +36,9 @@ class SecurityConfig(
                     AntPathRequestMatcher("/health", "GET"),
                     AntPathRequestMatcher("/actuator/**"),
                     AntPathRequestMatcher("/v3/api-docs/**"),
-                    AntPathRequestMatcher("/swagger-ui/**"),
                     AntPathRequestMatcher("/swagger-ui.html"),
+                    AntPathRequestMatcher("/swagger-ui/**"),
+                    AntPathRequestMatcher("/webjars/**"),
                 ).permitAll()
                 it.anyRequest().authenticated()
             }

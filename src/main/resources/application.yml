@@ -67,6 +67,20 @@ server:
   servlet:
     context-path: /api/v1
 
+# SpringDoc/Swagger configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    doc-expansion: list
+    try-it-out-enabled: true
+  use-fqn: true
+  show-actuator: true
+
 # Actuator configuration
 management:
   endpoints:
