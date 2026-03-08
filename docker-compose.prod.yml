@@ -31,8 +31,8 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/v1/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 90s
+      retries: 6
+      start_period: 30s
     networks:
       - currency-network
     restart: unless-stopped

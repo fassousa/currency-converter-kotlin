@@ -135,10 +135,9 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           envs: DB_USER,DB_PASSWORD,JWT_SECRET,CURRENCY_API_KEY
           script: |
-            set -e
             cd /home/${{ secrets.DEPLOY_USER }}/currency-converter-kotlin
 
-            # ── Write .env.production (done before everything else so rollback also has it) ──
+            # ── Write .env.production first so rollback also has it ──
             cat > .env.production << ENVEOF
             SPRING_PROFILES_ACTIVE=prod
             POSTGRES_USER=${{ secrets.DB_USER }}
@@ -157,34 +156,41 @@ jobs:
             echo "🚀 Starting containers..."
             docker compose -f docker-compose.prod.yml --env-file .env.production up -d --no-build
 
-            # ── Wait for Docker healthcheck to report healthy (up to 180 s) ──
-            echo "⏳ Waiting for app container to become healthy (up to 180s)..."
+            # ── Poll Docker healthcheck (up to 240s; start_period=30s + retries=5x10s = 80s max to unhealthy) ──
+            echo "⏳ Waiting for app container to become healthy (up to 240s)..."
             ELAPSED=0
-            MAX_WAIT=180
+            MAX_WAIT=240
             RETRY_INTERVAL=10
             while [ "$ELAPSED" -lt "$MAX_WAIT" ]; do
               STATUS=$(docker inspect --format='{{.State.Health.Status}}' currency-converter-app 2>/dev/null || echo "missing")
-              echo "  Container status: $STATUS (${ELAPSED}s elapsed)"
+              RUNNING=$(docker inspect --format='{{.State.Running}}' currency-converter-app 2>/dev/null || echo "false")
+              echo "  Container status: $STATUS | running: $RUNNING (${ELAPSED}s elapsed)"
               if [ "$STATUS" = "healthy" ]; then break; fi
-              if [ "$STATUS" = "unhealthy" ]; then
-                echo "  Container is unhealthy — dumping last 50 log lines for diagnosis:"
-                docker logs --tail=50 currency-converter-app || true
+              if [ "$STATUS" = "unhealthy" ] || [ "$RUNNING" = "false" ]; then
+                echo "  ⚠️  Container stopped or unhealthy — dumping logs:"
+                docker logs --tail=100 currency-converter-app || true
                 break
               fi
               sleep "$RETRY_INTERVAL"
               ELAPSED=$((ELAPSED + RETRY_INTERVAL))
             done
 
+            # ── Always dump logs on non-healthy outcome ──
             STATUS=$(docker inspect --format='{{.State.Health.Status}}' currency-converter-app 2>/dev/null || echo "missing")
             if [ "$STATUS" != "healthy" ]; then
-              echo "❌ Container never became healthy (status: $STATUS). Rolling back..."
-              docker compose -f docker-compose.prod.yml --env-file .env.production down
+              echo "❌ Container never became healthy (final status: $STATUS)"
+              echo "📋 Full app logs (last 100 lines):"
+              docker logs --tail=100 currency-converter-app || true
+              echo "📋 docker inspect:"
+              docker inspect currency-converter-app || true
+              echo "🔄 Rolling back..."
+              docker compose -f docker-compose.prod.yml --env-file .env.production down || true
               docker tag currency-converter-kotlin:rollback currency-converter-kotlin:latest 2>/dev/null || true
-              docker compose -f docker-compose.prod.yml --env-file .env.production up -d --no-build
+              docker compose -f docker-compose.prod.yml --env-file .env.production up -d --no-build || true
               exit 1
             fi
 
-            # ── Final HTTP health check against actuator (Spring Boot returns {"status":"UP"}) ──
+            # ── Final HTTP health check ──
             echo "🏥 HTTP health check..."
             RESPONSE=$(curl -sf http://localhost:8080/api/v1/actuator/health || true)
             echo "  Response: $RESPONSE"
@@ -194,10 +200,11 @@ jobs:
               exit 0
             fi
 
-            echo "❌ HTTP health check failed. Rolling back..."
-            docker compose -f docker-compose.prod.yml --env-file .env.production down
+            echo "❌ HTTP health check failed. Logs:"
+            docker logs --tail=50 currency-converter-app || true
+            docker compose -f docker-compose.prod.yml --env-file .env.production down || true
             docker tag currency-converter-kotlin:rollback currency-converter-kotlin:latest 2>/dev/null || true
-            docker compose -f docker-compose.prod.yml --env-file .env.production up -d --no-build
+            docker compose -f docker-compose.prod.yml --env-file .env.production up -d --no-build || true
             exit 1
 
       - name: Deployment summary

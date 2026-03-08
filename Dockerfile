@@ -35,7 +35,7 @@ USER app
 
 EXPOSE 8080
 
-HEALTHCHECK --interval=10s --timeout=5s --start-period=60s --retries=10 \
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=6 \
     CMD curl -sf http://localhost:8080/api/v1/actuator/health | grep -q '"status":"UP"' || exit 1
 
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS org.springframework.boot.loader.launch.JarLauncher"]
