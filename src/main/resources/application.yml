@@ -79,7 +79,7 @@ springdoc:
     doc-expansion: list
     try-it-out-enabled: true
   use-fqn: true
-  show-actuator: true
+  show-actuator: false
 
 # Actuator configuration
 management:

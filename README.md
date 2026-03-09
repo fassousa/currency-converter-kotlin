@@ -80,6 +80,7 @@ docker-compose up
 
 - ✅ **10+ currencies** with real-time exchange rates ([CurrencyAPI](https://currencyapi.com))
 - ✅ **JWT authentication** for secure API access (Spring Security)
+- ✅ **Idempotent transactions** — Server auto-generates Idempotency-Keys, prevents duplicates on retries
 - ✅ **Transaction history** with pagination and user isolation
 - ✅ **Comprehensive logging** with structured JSON (Logstash Logback)
 - ✅ **Health checks** for monitoring (database, cache, external API)
@@ -118,6 +119,7 @@ open build/reports/jacoco/test/html/index.html  # View coverage
 ## 📚 Documentation
 
 - 📖 [API Examples](src/main/resources/docs/API_EXAMPLES.md) - Request/response samples
+- 🔑 [Idempotency-Key Guide](IDEMPOTENCY_KEY_GUIDE.md) - Understand & use idempotent requests
 - 📖 [Architecture Decisions](KOTLIN_IMPLEMENTATION_PLAN.md) - Technical choices & rationale
 - 📖 [Development Guide](DEVELOPMENT.md) - Local setup & Docker workflows
 - 📖 [Deployment Guide](DEPLOYMENT.md) - Production setup with HTTPS

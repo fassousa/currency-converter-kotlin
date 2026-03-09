@@ -59,7 +59,7 @@ class TransactionControllerTest {
     )
 
     @Test
-    fun `POST transactions creates a transaction and returns 201`() {
+    fun `POST transactions creates a transaction with provided Idempotency-Key and returns 201`() {
         val idempotencyKey = UUID.randomUUID()
         val transaction = buildTransaction(userId = userId, idempotencyKey = idempotencyKey)
         every { createTransactionUseCase.execute(any()) } returns transaction
@@ -77,6 +77,31 @@ class TransactionControllerTest {
             with(csrf())
         }.andExpect {
             status { isCreated() }
+            jsonPath("$.idempotencyKey") { value(idempotencyKey.toString()) }
+            jsonPath("$.sourceCurrency") { value("USD") }
+            jsonPath("$.targetCurrency") { value("EUR") }
+        }
+    }
+
+    @Test
+    fun `POST transactions auto-generates Idempotency-Key when not provided`() {
+        val transaction = buildTransaction(userId = userId)
+        every { createTransactionUseCase.execute(any()) } returns transaction
+
+        val request = CreateTransactionRequest(
+            sourceCurrency = "USD",
+            sourceAmount = BigDecimal("100.00"),
+            targetCurrency = "EUR",
+        )
+        mockMvc.post("/transactions") {
+            // No Idempotency-Key header provided
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(request)
+            with(authentication(jwtAuth))
+            with(csrf())
+        }.andExpect {
+            status { isCreated() }
+            jsonPath("$.idempotencyKey") { exists() } // Should have an auto-generated key
             jsonPath("$.sourceCurrency") { value("USD") }
             jsonPath("$.targetCurrency") { value("EUR") }
         }
@@ -86,7 +111,6 @@ class TransactionControllerTest {
     fun `POST transactions returns 422 for missing sourceCurrency`() {
         val body = """{"sourceAmount":100.00,"targetCurrency":"EUR"}"""
         mockMvc.post("/transactions") {
-            header("Idempotency-Key", UUID.randomUUID().toString())
             contentType = MediaType.APPLICATION_JSON
             content = body
             with(authentication(jwtAuth))

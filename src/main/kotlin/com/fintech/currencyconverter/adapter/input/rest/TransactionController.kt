@@ -35,17 +35,20 @@ class TransactionController(
     @PostMapping
     @Operation(
         summary = "Create a currency conversion transaction",
-        description = "Converts an amount from one currency to another. Requires an Idempotency-Key header.",
+        description = "Converts an amount from one currency to another. Idempotency-Key header " +
+            "is optional - server will auto-generate if not provided. Always returns the " +
+            "idempotencyKey in response.",
     )
     fun createTransaction(
-        @RequestHeader("Idempotency-Key") idempotencyKey: UUID,
+        @RequestHeader("Idempotency-Key", required = false) idempotencyKey: UUID?,
         @Valid @RequestBody request: CreateTransactionRequest,
         authentication: Authentication,
     ): ResponseEntity<TransactionResponse> {
         val jwtAuth = authentication as JwtAuthenticationToken
+        val key = idempotencyKey ?: UUID.randomUUID()
         val command = CreateTransactionCommand(
             userId = jwtAuth.userId,
-            idempotencyKey = idempotencyKey,
+            idempotencyKey = key,
             sourceCurrency = request.sourceCurrency!!,
             sourceAmount = request.sourceAmount!!,
             targetCurrency = request.targetCurrency!!,
