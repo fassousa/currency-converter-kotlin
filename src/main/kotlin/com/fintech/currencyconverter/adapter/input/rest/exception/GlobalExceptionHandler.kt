@@ -66,5 +66,12 @@ class GlobalExceptionHandler {
                 .body(ErrorResponse("DATA_CONFLICT", "Data conflict"))
         }
     }
+
+    @ExceptionHandler(Exception::class)
+    @Suppress("UnusedParameter")
+    fun handleUnexpected(e: Exception): ResponseEntity<ErrorResponse> =
+        ResponseEntity
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(ErrorResponse("INTERNAL_ERROR", "An unexpected error occurred"))
 }
 

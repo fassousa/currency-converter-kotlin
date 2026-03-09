@@ -1,6 +1,7 @@
 package com.fintech.currencyconverter.infrastructure.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.cache.annotation.EnableCaching
 import org.springframework.context.annotation.Bean
@@ -23,7 +24,17 @@ class CacheConfig {
         redisConnectionFactory: RedisConnectionFactory,
         objectMapper: ObjectMapper,
     ): RedisCacheManager {
-        val serializer = GenericJackson2JsonRedisSerializer(objectMapper)
+        // Copy the application ObjectMapper and enable default typing so that
+        // numeric types like BigDecimal are stored with their Java type metadata.
+        // Without this, Jackson deserializes every JSON number as Double on cache
+        // hit, causing a ClassCastException inside the @Cacheable AOP proxy.
+        val cacheMapper = objectMapper.copy().activateDefaultTyping(
+            BasicPolymorphicTypeValidator.builder()
+                .allowIfBaseType(Any::class.java)
+                .build(),
+            ObjectMapper.DefaultTyping.EVERYTHING,
+        )
+        val serializer = GenericJackson2JsonRedisSerializer(cacheMapper)
         val defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
             .entryTtl(Duration.ofHours(CACHE_TTL_HOURS))
             .serializeKeysWith(
