@@ -22,7 +22,7 @@ class OpenApiConfig {
             )
             .servers(listOf(
                 Server().url("http://localhost:8080/api/v1").description("Development server"),
-                Server().url("https://kotlin-converter.duckdns.org").description("Production server"),
+                Server().url("https://kotlin-converter.duckdns.org/api/v1").description("Production server"),
             ))
             .components(
                 Components().addSecuritySchemes(
