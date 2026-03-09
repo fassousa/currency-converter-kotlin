@@ -111,7 +111,7 @@ app:
     secret: ${JWT_SECRET:dGVzdC1zZWNyZXQta2V5LWZvci1kZXZlbG9wbWVudC0zMmJ5dGU=}
     expiration: ${JWT_EXPIRATION:86400000}
   currency-api:
-    url: ${CURRENCY_API_URL:https://api.exchangeratesapi.io/v1}
+    url: ${CURRENCY_API_URL:https://api.currencyapi.com/v3}
     api-key: ${CURRENCY_API_KEY:change-me}
 
 # Resilience4j configuration

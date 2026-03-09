@@ -22,14 +22,14 @@ class CurrencyApiGateway(
     override fun getRate(sourceCurrency: String, targetCurrency: String): BigDecimal {
         val response = currencyApiClient.getLatestRates(
             apiKey = apiKey,
-            base = sourceCurrency,
-            symbols = targetCurrency,
+            baseCurrency = sourceCurrency,
+            currencies = targetCurrency,
         )
-        val rate = response.rates[targetCurrency]
+        val rateData = response.data[targetCurrency]
             ?: throw ExchangeRateUnavailableException(
                 "Rate not found for $sourceCurrency -> $targetCurrency",
             )
-        return BigDecimal.valueOf(rate)
+        return BigDecimal.valueOf(rateData.value)
     }
 
     @Suppress("unused")
