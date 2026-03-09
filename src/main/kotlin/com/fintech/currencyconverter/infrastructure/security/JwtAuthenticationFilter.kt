@@ -36,7 +36,9 @@ class JwtAuthenticationFilter(
                     authorities = listOf(SimpleGrantedAuthority("ROLE_USER")),
                 )
                 auth.details = WebAuthenticationDetailsSource().buildDetails(request)
-                SecurityContextHolder.getContext().authentication = auth
+                val context = SecurityContextHolder.createEmptyContext()
+                context.authentication = auth
+                SecurityContextHolder.setContext(context)
             }
         }
         filterChain.doFilter(request, response)
@@ -47,4 +49,3 @@ class JwtAuthenticationFilter(
         return if (header.startsWith("Bearer ")) header.removePrefix("Bearer ") else null
     }
 }
-

@@ -11,6 +11,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+import org.springframework.security.web.context.NullSecurityContextRepository
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher
 
 @Configuration
@@ -25,6 +26,7 @@ class SecurityConfig(
         http
             .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .securityContext { it.securityContextRepository(NullSecurityContextRepository()) }
             .exceptionHandling {
                 it.authenticationEntryPoint(authEntryPoint)
                 it.accessDeniedHandler(accessDeniedHandler)
