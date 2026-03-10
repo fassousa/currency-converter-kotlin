@@ -29,7 +29,7 @@ class CurrencyApiGateway(
             ?: throw ExchangeRateUnavailableException(
                 "Rate not found for $sourceCurrency -> $targetCurrency",
             )
-        return BigDecimal.valueOf(rateData.value)
+        return rateData.value
     }
 
     @Suppress("unused")
