@@ -4,6 +4,7 @@ import org.springframework.cloud.openfeign.FeignClient
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestParam
 import com.fasterxml.jackson.annotation.JsonProperty
+import java.math.BigDecimal
 
 @FeignClient(name = "currencyApi", url = "\${app.currency-api.url}")
 interface CurrencyApiClient {
@@ -22,6 +23,6 @@ data class CurrencyApiResponse(
 
 data class CurrencyRate(
     @JsonProperty("value")
-    val value: Double,
+    val value: BigDecimal,
 )
 
